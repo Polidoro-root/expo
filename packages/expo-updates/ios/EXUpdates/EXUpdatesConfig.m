@@ -44,6 +44,7 @@ NSString * const EXUpdatesConfigHasEmbeddedUpdateKey = @"EXUpdatesHasEmbeddedUpd
 NSString * const EXUpdatesConfigExpectsSignedManifestKey = @"EXUpdatesExpectsSignedManifest";
 NSString * const EXUpdatesConfigCodeSigningCertificateKey = @"EXUpdatesCodeSigningCertificate";
 NSString * const EXUpdatesConfigCodeSigningMetadataKey = @"EXUpdatesCodeSigningMetadata";
+NSString * const EXUpdatesConfigCodeSigningIncludeManifestResponseCertificateChainKey = @"EXUpdatesCodeSigningIncludeManifestResponseCertificateChain";
 
 NSString * const EXUpdatesConfigReleaseChannelDefaultValue = @"default";
 
@@ -200,9 +201,16 @@ NSString * const EXUpdatesConfigCheckOnLaunchValueNever = @"NEVER";
     }
   }
   
+  BOOL codeSigningIncludeManifestResponseCertificateChain = NO;
+  id codeSigningIncludeManifestResponseCertificateChainRaw = config[EXUpdatesConfigEnabledKey];
+  if (codeSigningIncludeManifestResponseCertificateChainRaw && [codeSigningIncludeManifestResponseCertificateChainRaw isKindOfClass:[NSNumber class]]) {
+    codeSigningIncludeManifestResponseCertificateChain = [(NSNumber *)codeSigningIncludeManifestResponseCertificateChainRaw boolValue];
+  }
+  
   if (codeSigningCertificate) {
     _codeSigningConfiguration = [EXUpdatesConfig codeSigningConfigurationForCodeSigningCertificate:codeSigningCertificate
-                                                                               codeSigningMetadata:codeSigningMetadata];
+                                                                               codeSigningMetadata:codeSigningMetadata
+                                                codeSigningIncludeManifestResponseCertificateChain:codeSigningIncludeManifestResponseCertificateChain];
   }
 }
 
@@ -212,11 +220,13 @@ NSString * const EXUpdatesConfigCheckOnLaunchValueNever = @"NEVER";
 }
 
 + (nullable EXUpdatesCodeSigningConfiguration *)codeSigningConfigurationForCodeSigningCertificate:(NSString *)codeSigningCertificate
-                                                                              codeSigningMetadata:(nullable NSDictionary *)codeSigningMetadata {
+                                                                              codeSigningMetadata:(nullable NSDictionary *)codeSigningMetadata
+                                               codeSigningIncludeManifestResponseCertificateChain:(BOOL)codeSigningIncludeManifestResponseCertificateChain {
   NSError *error;
-  EXUpdatesCodeSigningConfiguration *codeSigningConfiguration = [[EXUpdatesCodeSigningConfiguration alloc] initWithCertificate:codeSigningCertificate
-                                                                                                                      metadata:codeSigningMetadata
-                                                                                                                         error:&error];
+  EXUpdatesCodeSigningConfiguration *codeSigningConfiguration = [[EXUpdatesCodeSigningConfiguration alloc] initWithEmbeddedCertificateString:codeSigningCertificate
+                                                                                                                                    metadata:codeSigningMetadata
+                                                                                                     includeManifestResponseCertificateChain:codeSigningIncludeManifestResponseCertificateChain
+                                                                                                                                       error:&error];
   if (error) {
     NSString *message;
     if (error.code == EXUpdatesCodeSigningConfigurationErrorCertificateParseError) {
